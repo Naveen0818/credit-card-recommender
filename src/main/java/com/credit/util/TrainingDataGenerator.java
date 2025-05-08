@@ -29,11 +29,9 @@ public class TrainingDataGenerator {
         profile.setAnnualIncome(random.nextDouble(150000, 300000)); // $150k-$300k
         profile.setMonthlyDebtPayments(random.nextDouble(1000, 3000)); // $1k-$3k monthly payments
         profile.setOldestAccountAge(random.nextInt(15, 30)); // 15-30 years
-        profile.setActiveCreditCards(random.nextInt(3, 6)); // 3-5 cards
-        profile.setTotalLoans(random.nextInt(1, 3)); // 1-2 loans
-        profile.setCreditCardUsage(random.nextDouble(0.1, 0.3)); // 10-30% usage
-        profile.setOnTimePayments(random.nextInt(11, 13)); // 11-12 on-time payments
-        profile.setPredictedCategory(CreditCategory.EXCELLENT);
+        profile.setFicoScore(random.nextInt(750, 850)); // 750-850 FICO score
+        profile.setMissedPayments(random.nextInt(0, 2)); // 0-1 missed payments
+        profile.setCategory(CreditCategory.EXCELLENT);
         return profile;
     }
 
@@ -42,11 +40,9 @@ public class TrainingDataGenerator {
         profile.setAnnualIncome(random.nextDouble(80000, 150000)); // $80k-$150k
         profile.setMonthlyDebtPayments(random.nextDouble(2000, 4000)); // $2k-$4k monthly payments
         profile.setOldestAccountAge(random.nextInt(8, 15)); // 8-15 years
-        profile.setActiveCreditCards(random.nextInt(2, 4)); // 2-3 cards
-        profile.setTotalLoans(random.nextInt(1, 3)); // 1-2 loans
-        profile.setCreditCardUsage(random.nextDouble(0.2, 0.4)); // 20-40% usage
-        profile.setOnTimePayments(random.nextInt(10, 12)); // 10-11 on-time payments
-        profile.setPredictedCategory(CreditCategory.GOOD);
+        profile.setFicoScore(random.nextInt(700, 750)); // 700-750 FICO score
+        profile.setMissedPayments(random.nextInt(1, 3)); // 1-2 missed payments
+        profile.setCategory(CreditCategory.GOOD);
         return profile;
     }
 
@@ -55,11 +51,9 @@ public class TrainingDataGenerator {
         profile.setAnnualIncome(random.nextDouble(50000, 80000)); // $50k-$80k
         profile.setMonthlyDebtPayments(random.nextDouble(3000, 5000)); // $3k-$5k monthly payments
         profile.setOldestAccountAge(random.nextInt(4, 8)); // 4-8 years
-        profile.setActiveCreditCards(random.nextInt(1, 3)); // 1-2 cards
-        profile.setTotalLoans(random.nextInt(2, 4)); // 2-3 loans
-        profile.setCreditCardUsage(random.nextDouble(0.4, 0.6)); // 40-60% usage
-        profile.setOnTimePayments(random.nextInt(8, 10)); // 8-9 on-time payments
-        profile.setPredictedCategory(CreditCategory.FAIR);
+        profile.setFicoScore(random.nextInt(650, 700)); // 650-700 FICO score
+        profile.setMissedPayments(random.nextInt(2, 4)); // 2-3 missed payments
+        profile.setCategory(CreditCategory.FAIR);
         return profile;
     }
 
@@ -68,11 +62,9 @@ public class TrainingDataGenerator {
         profile.setAnnualIncome(random.nextDouble(25000, 50000)); // $25k-$50k
         profile.setMonthlyDebtPayments(random.nextDouble(4000, 6000)); // $4k-$6k monthly payments
         profile.setOldestAccountAge(random.nextInt(1, 4)); // 1-4 years
-        profile.setActiveCreditCards(random.nextInt(1, 2)); // 1 card
-        profile.setTotalLoans(random.nextInt(3, 5)); // 3-4 loans
-        profile.setCreditCardUsage(random.nextDouble(0.6, 0.9)); // 60-90% usage
-        profile.setOnTimePayments(random.nextInt(6, 8)); // 6-7 on-time payments
-        profile.setPredictedCategory(CreditCategory.POOR);
+        profile.setFicoScore(random.nextInt(300, 650)); // 300-650 FICO score
+        profile.setMissedPayments(random.nextInt(3, 12)); // 3-11 missed payments
+        profile.setCategory(CreditCategory.POOR);
         return profile;
     }
 } 

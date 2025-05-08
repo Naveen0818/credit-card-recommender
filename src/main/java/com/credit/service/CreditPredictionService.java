@@ -18,13 +18,11 @@ public class CreditPredictionService {
     private List<CreditProfile> trainingData;
     private Map<CreditCategory, SimpleRegression> regressionModels;
     private static final double[] FEATURE_WEIGHTS = {
-        0.20,  // annualIncome
-        0.20,  // monthlyDebtPayments
-        0.15,  // oldestAccountAge
-        0.15,  // activeCreditCards
-        0.10,  // totalLoans
-        0.10,  // creditCardUsage
-        0.10   // onTimePayments
+        0.25,  // normalizedIncome
+        0.20,  // debtToIncomeRatio
+        0.20,  // normalizedCreditHistory
+        0.20,  // normalizedFicoScore
+        0.15   // normalizedMissedPayments
     };
 
     public CreditPredictionService() {
@@ -51,7 +49,7 @@ public class CreditPredictionService {
             // Log category distribution
             Map<CreditCategory, Long> categoryCounts = trainingData.stream()
                 .collect(HashMap::new,
-                    (map, profile) -> map.merge(profile.getPredictedCategory(), 1L, Long::sum),
+                    (map, profile) -> map.merge(profile.getCategory(), 1L, Long::sum),
                     HashMap::putAll);
             
             logger.info("Training data distribution: {}", categoryCounts);
@@ -74,7 +72,7 @@ public class CreditPredictionService {
                 for (int i = 0; i < features.length; i++) {
                     combinedFeature += features[i] * FEATURE_WEIGHTS[i];
                 }
-                double target = profile.getPredictedCategory() == category ? 1.0 : 0.0;
+                double target = profile.getCategory() == category ? 1.0 : 0.0;
                 regression.addData(combinedFeature, target);
             }
             
@@ -85,21 +83,23 @@ public class CreditPredictionService {
 
     private double[] extractFeatures(CreditProfile profile) {
         // Calculate derived metrics from user-friendly fields
-        double debtToIncomeRatio = profile.getMonthlyDebtPayments() * 12 / profile.getAnnualIncome();
         double normalizedIncome = Math.min(profile.getAnnualIncome() / 200000.0, 1.0); // Cap at $200k
+        double debtToIncomeRatio = profile.getMonthlyDebtPayments() * 12 / profile.getAnnualIncome();
         double normalizedCreditHistory = Math.min(profile.getOldestAccountAge() / 20.0, 1.0); // Cap at 20 years
-        double normalizedCreditCards = Math.min(profile.getActiveCreditCards() / 5.0, 1.0); // Cap at 5 cards
-        double normalizedLoans = Math.min(profile.getTotalLoans() / 5.0, 1.0); // Cap at 5 loans
-        double normalizedPaymentHistory = profile.getOnTimePayments() / 12.0; // Convert to 0-1 scale
+        
+        // Convert missed payments to a negative score (higher missed payments = lower score)
+        double missedPayments = 12 - profile.getMissedPayments();
+        double normalizedMissedPayments = 1.0 - (missedPayments / 12.0); // Convert to 0-1 scale where 0 is worst
+        
+        // Normalize FICO score to 0-1 scale (300-850 range)
+        double normalizedFicoScore = (profile.getFicoScore() - 300.0) / 550.0; // 550 is the range (850-300)
         
         return new double[]{
             normalizedIncome,
             debtToIncomeRatio,
             normalizedCreditHistory,
-            normalizedCreditCards,
-            normalizedLoans,
-            profile.getCreditCardUsage(),
-            normalizedPaymentHistory
+            normalizedFicoScore,
+            normalizedMissedPayments
         };
     }
 
@@ -107,10 +107,15 @@ public class CreditPredictionService {
         Map<CreditCategory, Double> predictions = new EnumMap<>(CreditCategory.class);
         double[] features = extractFeatures(profile);
         
-        // Calculate combined feature value
+        // Calculate combined feature value with negative weights for missed payments
         double combinedFeature = 0.0;
         for (int i = 0; i < features.length; i++) {
-            combinedFeature += features[i] * FEATURE_WEIGHTS[i];
+            // For missed payments (index 4), multiply by -1 to make high values negative
+            if (i == 4) {
+                combinedFeature += (1.0 - features[i]) * FEATURE_WEIGHTS[i];
+            } else {
+                combinedFeature += features[i] * FEATURE_WEIGHTS[i];
+            }
         }
         
         // Get predictions for each category
@@ -120,22 +125,16 @@ public class CreditPredictionService {
         }
         
         // Apply thresholds based on feature values
-        double onTimePaymentRate = profile.getOnTimePayments() / 12.0;
-        double debtToIncomeRatio = profile.getMonthlyDebtPayments() * 12 / profile.getAnnualIncome();
+        double missedPayments = profile.getMissedPayments();
+        double missedPaymentRate = missedPayments / 12.0;
         
-        if (onTimePaymentRate < 0.7) { // Less than 70% on-time payments
+        if (missedPaymentRate > 0.3) { // High missed payments
             return CreditCategory.POOR;
-        } else if (onTimePaymentRate >= 0.9 && // 90% or more on-time payments
-                  debtToIncomeRatio <= 0.3 && // Low debt-to-income ratio
-                  profile.getCreditCardUsage() <= 0.3) { // Low credit card usage
+        } else if (missedPaymentRate <= 0.1) { // Excellent payment history
             return CreditCategory.EXCELLENT;
-        } else if (onTimePaymentRate >= 0.8 && // 80% or more on-time payments
-                  debtToIncomeRatio <= 0.4 && // Moderate debt-to-income ratio
-                  profile.getCreditCardUsage() <= 0.4) { // Moderate credit card usage
+        } else if (missedPaymentRate <= 0.2) { // Good payment history
             return CreditCategory.GOOD;
-        } else if (onTimePaymentRate >= 0.7 && // 70% or more on-time payments
-                  debtToIncomeRatio <= 0.6 && // Higher debt-to-income ratio
-                  profile.getCreditCardUsage() <= 0.6) { // Higher credit card usage
+        } else if (missedPaymentRate <= 0.3) { // Fair payment history
             return CreditCategory.FAIR;
         }
         
@@ -160,7 +159,7 @@ public class CreditPredictionService {
                 .collect(HashMap::new,
                         (map, category) -> map.put(category.name(),
                                 trainingData.stream()
-                                        .filter(p -> p.getPredictedCategory() == category)
+                                        .filter(p -> p.getCategory() == category)
                                         .count()),
                         HashMap::putAll));
         
