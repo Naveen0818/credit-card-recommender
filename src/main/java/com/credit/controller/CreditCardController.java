@@ -50,35 +50,41 @@ public class CreditCardController {
         description = "Predicts the credit category based on the provided credit profile"
     )
     @ApiResponse(responseCode = "200", description = "Successfully predicted credit category")
-    public ResponseEntity<CreditCategory> predictCategory(
-            @Parameter(description = "Credit profile information") @RequestBody CreditProfile profile) {
-        CreditCategory category = predictionService.predictCategory(profile);
-        return ResponseEntity.ok(category);
+    public ResponseEntity<CreditCategory> predictCreditCategory(@RequestBody CreditProfile profile) {
+        CreditCategory predictedCategory = predictionService.predictCategory(profile);
+        return ResponseEntity.ok(predictedCategory);
     }
 
-    @GetMapping("/recommendations/{category}")
-    @Operation(
-        summary = "Get credit card recommendations",
-        description = "Returns a list of recommended credit cards for the specified credit category"
-    )
-    @ApiResponse(responseCode = "200", description = "Successfully retrieved credit card recommendations")
-    public ResponseEntity<List<CreditCard>> getRecommendations(
-            @Parameter(description = "Credit category (EXCELLENT, GOOD, FAIR, POOR)") 
-            @PathVariable CreditCategory category) {
-        List<CreditCard> recommendations = recommendationService.getRecommendations(category);
-        return ResponseEntity.ok(recommendations);
-    }
-
-    @PostMapping("/recommendations/profile")
+    @PostMapping("/recommend")
     @Operation(
         summary = "Get personalized credit card recommendations",
         description = "Predicts credit category and returns matching credit card recommendations based on the provided profile"
     )
     @ApiResponse(responseCode = "200", description = "Successfully retrieved personalized credit card recommendations")
-    public ResponseEntity<List<CreditCard>> getPersonalizedRecommendations(
-            @Parameter(description = "Credit profile information") @RequestBody CreditProfile profile) {
-        CreditCategory category = predictionService.predictCategory(profile);
-        List<CreditCard> recommendations = recommendationService.getRecommendations(category);
+    public ResponseEntity<List<CreditCard>> recommendCreditCards(@RequestBody CreditProfile profile) {
+        CreditCategory predictedCategory = predictionService.predictCategory(profile);
+        List<CreditCard> recommendations = recommendationService.getRecommendedCards(profile, predictedCategory);
         return ResponseEntity.ok(recommendations);
+    }
+
+    @GetMapping("/cards")
+    @Operation(
+        summary = "Get all credit cards",
+        description = "Returns a list of all available credit cards"
+    )
+    @ApiResponse(responseCode = "200", description = "Successfully retrieved all credit cards")
+    public ResponseEntity<List<CreditCard>> getAllCards() {
+        return ResponseEntity.ok(recommendationService.getAllCards());
+    }
+
+    @GetMapping("/cards/{category}")
+    @Operation(
+        summary = "Get credit cards by category",
+        description = "Returns a list of credit cards for the specified category"
+    )
+    @ApiResponse(responseCode = "200", description = "Successfully retrieved credit cards by category")
+    public ResponseEntity<List<CreditCard>> getCardsByCategory(@PathVariable CreditCategory category) {
+        List<CreditCard> cards = recommendationService.getRecommendedCards(null, category);
+        return ResponseEntity.ok(cards);
     }
 } 
