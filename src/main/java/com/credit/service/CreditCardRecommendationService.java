@@ -1,59 +1,68 @@
 package com.credit.service;
 
 import com.credit.model.CreditCard;
-import com.credit.model.CreditCategory;
 import com.credit.model.CreditProfile;
+import com.credit.model.CreditCategory;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+import jakarta.annotation.PostConstruct;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.*;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 
+@Slf4j
 @Service
 public class CreditCardRecommendationService {
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final CreditPredictionService predictionService;
     private List<CreditCard> creditCards;
-
-    public CreditCardRecommendationService() {
-        loadCreditCards();
+    
+    @Autowired
+    public CreditCardRecommendationService(CreditPredictionService predictionService) {
+        this.predictionService = predictionService;
     }
-
-    private void loadCreditCards() {
+    
+    @PostConstruct
+    public void initialize() {
         try {
-            ObjectMapper mapper = new ObjectMapper();
+            // Load credit card data
             ClassPathResource resource = new ClassPathResource("credit-cards.json");
-            this.creditCards = mapper.readValue(resource.getInputStream(), 
+            creditCards = objectMapper.readValue(resource.getInputStream(), 
                 new TypeReference<List<CreditCard>>() {});
+            
+            log.info("Loaded {} credit cards", creditCards.size());
+            
         } catch (IOException e) {
-            this.creditCards = new ArrayList<>();
-            initializeDefaultCreditCards();
+            log.error("Error loading credit card data", e);
+            throw new RuntimeException("Failed to initialize credit card recommendation service", e);
         }
     }
-
-    private void initializeDefaultCreditCards() {
-        // This method will be replaced by the JSON file
-        CreditCard card = new CreditCard();
-        card.setId("default-card");
-        card.setName("Default Credit Card");
-        card.setBrand("Default Bank");
-        card.setCategory(CreditCategory.GOOD);
-        card.setAnnualFee(95.0);
-        card.setInterestRate(15.99);
-        card.setRewardsRate(1.5);
-        card.setCreditLimit(5000.0);
-        card.setFeatures(List.of("Basic Rewards", "Online Banking"));
-        card.setEligibilityCriteria(List.of("Good Credit Score", "Stable Income"));
-        creditCards.add(card);
+    
+    public List<CreditCard> getRecommendations(CreditProfile profile) {
+        CreditCategory category = predictionService.predictCreditCategory(profile);
+        return getRecommendedCards(profile, category);
     }
-
-    public List<CreditCard> getRecommendedCards(CreditProfile profile, CreditCategory predictedCategory) {
+    
+    private List<CreditCard> getRecommendedCards(CreditProfile profile, CreditCategory category) {
+        // Filter cards by category and eligibility criteria
         return creditCards.stream()
-            .filter(card -> card.getCategory() == predictedCategory)
-            .collect(Collectors.toList());
+            .filter(card -> card.getCategory() == category)
+            .filter(card -> isEligible(profile, card))
+            .sorted(Comparator.comparingDouble(CreditCard::getRewardsRate).reversed())
+            .limit(5)
+            .toList();
     }
-
+    
+    private boolean isEligible(CreditProfile profile, CreditCard card) {
+        // Check if profile meets minimum requirements
+        return profile.getIncome() >= card.getMinIncome() &&
+               profile.getCreditHistoryLength() >= card.getMinCreditHistory() &&
+               profile.getPaymentHistory() >= card.getMinPaymentHistory();
+    }
+    
     public List<CreditCard> getAllCards() {
         return new ArrayList<>(creditCards);
     }

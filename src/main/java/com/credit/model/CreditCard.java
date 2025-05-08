@@ -15,4 +15,9 @@ public class CreditCard {
     private double creditLimit;
     private List<String> features;
     private List<String> eligibilityCriteria;
+    
+    // Eligibility criteria
+    private double minIncome;
+    private int minCreditHistory;
+    private double minPaymentHistory;
 } 
